@@ -3,7 +3,7 @@
 
   <groupId>eu.toolchain.condo</groupId>
   <artifactId>condo-parent</artifactId>
-  <version>0.0.1-SNAPSHOT</version>
+  <version>0.1.0</version>
   <packaging>pom</packaging>
 
   <url>https://github.com/udoprog/condo</url>
@@ -36,7 +36,7 @@
     <connection>scm:git:git@github.com:udoprog/condo</connection>
     <developerConnection>scm:git:git@github.com:udoprog/condo</developerConnection>
     <url>https://github.com/udoprog/condo</url>
-    <tag>HEAD</tag>
+    <tag>0.1.0</tag>
   </scm>
 
   <developers>
