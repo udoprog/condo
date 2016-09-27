@@ -5,7 +5,9 @@ import java.util.concurrent.Executor;
 import java.util.concurrent.ForkJoinPool;
 import java.util.function.Predicate;
 import org.junit.Before;
+import org.junit.Rule;
 import org.junit.Test;
+import org.junit.rules.Timeout;
 import org.mockito.Mockito;
 
 import static java.util.concurrent.CompletableFuture.completedFuture;
@@ -19,6 +21,9 @@ public class ThreadedApplicationTest {
   private Condo<String> condo;
   private Database database;
   private MyThreadedApplication app;
+
+  @Rule
+  public Timeout globalTimeout = new Timeout(500);
 
   @Before
   public void setUp() {

@@ -3,7 +3,9 @@ package eu.toolchain.condo;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ForkJoinPool;
 import java.util.function.Predicate;
+import org.junit.Rule;
 import org.junit.Test;
+import org.junit.rules.Timeout;
 import org.mockito.Mockito;
 
 import static org.hamcrest.MatcherAssert.assertThat;
@@ -11,6 +13,9 @@ import static org.hamcrest.core.Is.is;
 import static org.hamcrest.core.IsInstanceOf.instanceOf;
 
 public class CoreCondoTest {
+  @Rule
+  public Timeout globalTimeout = new Timeout(500);
+
   @Test
   public void testBuildDefault() {
     final Condo<Meta> condo = CoreCondo.buildDefault();
