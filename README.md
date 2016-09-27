@@ -22,4 +22,4 @@ For even more detailed use-cases, read the JavaDoc in
 [the Condo class][condo-api] or checkout [the test cases][condo-tests]
 
 [condo-api]: /api/src/main/java/eu/toolchain/condo/Condo.java
-[condo-api]: /core/src/test/java/eu/toolchain/condo/CoreCondoTest.java
+[condo-tests]: /core/src/test/java/eu/toolchain/condo/CoreCondoTest.java
