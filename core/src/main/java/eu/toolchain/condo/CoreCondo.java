@@ -47,6 +47,7 @@ public class CoreCondo<M> implements Condo<M> {
     synchronized (maskLock) {
       if (masks.stream().anyMatch(p -> p.test(metadata))) {
         this.deferred.add(deferred);
+        maskLock.notifyAll();
         return future;
       }
     }

@@ -62,6 +62,21 @@ public class ThreadedApplicationTest {
     verify(database).write(any(Entity.class));
   }
 
+  @Test
+  public void testMaskedPump() throws Exception {
+    final Predicate<String> predicate = m -> m.equals("write:1");
+
+    condo.mask(predicate);
+
+    app.doSomething(entity);
+
+    /* allow the write to go through and wait for it to happen */
+    condo.pump(predicate).waitOnce(predicate);
+
+    /* the entity with id 1 is not guaranteed to have been written */
+    verify(database).write(any(Entity.class));
+  }
+
   /* declared in your project */
   static class MyThreadedApplication {
     private final Database database;
