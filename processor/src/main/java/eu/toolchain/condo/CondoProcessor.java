@@ -28,6 +28,9 @@ import javax.lang.model.element.ExecutableElement;
 import javax.lang.model.element.Modifier;
 import javax.lang.model.element.TypeElement;
 import javax.lang.model.element.VariableElement;
+import javax.lang.model.type.DeclaredType;
+import javax.lang.model.type.TypeKind;
+import javax.lang.model.type.TypeMirror;
 import javax.lang.model.util.Elements;
 import javax.lang.model.util.Types;
 import javax.tools.Diagnostic;
@@ -36,6 +39,7 @@ import java.text.MessageFormat;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Set;
+import java.util.concurrent.CompletableFuture;
 import java.util.stream.Stream;
 
 @AutoService(Processor.class)
@@ -110,6 +114,9 @@ public class CondoProcessor extends AbstractProcessor {
   }
 
   private JavaFile processImpl(final TypeElement typeElement) {
+    final TypeElement completableFutureType =
+        elements.getTypeElement(CompletableFuture.class.getCanonicalName());
+
     final String packageName = elements.getPackageOf(typeElement).getQualifiedName().toString();
     final String className =
         MessageFormat.format(IMPLEMENTATION_NAME_FORMAT, typeElement.getSimpleName());
@@ -154,10 +161,11 @@ public class CondoProcessor extends AbstractProcessor {
 
       final String methodName = executableElement.getSimpleName().toString();
       final MethodSpec.Builder methodSpec = MethodSpec.methodBuilder(methodName);
+      final TypeMirror returnType = executableElement.getReturnType();
 
       methodSpec.addAnnotation(overrideAnnotation);
       methodSpec.addModifiers(Modifier.PUBLIC);
-      methodSpec.returns(TypeName.get(executableElement.getReturnType()));
+      methodSpec.returns(TypeName.get(returnType));
 
       final List<ParameterSpec> metadataParameters = new ArrayList<>();
       final List<ParameterSpec> delegateParameters = new ArrayList<>();
@@ -191,13 +199,32 @@ public class CondoProcessor extends AbstractProcessor {
       arguments.add(METADATA_TYPE_CONVERTER.convert(methodName));
       metadataParameters.forEach(arguments::add);
 
-      arguments.add(delegateField);
-      arguments.add(methodName);
-      delegateParameters.forEach(arguments::add);
+      final Stream.Builder<Object> delegateOnly = Stream.builder();
 
-      methodSpec.addStatement(
-          String.format("return $N.scheduleAsync(new $T.$L(%s), () -> $N.$L(%s))", metadataFormat,
-              delegateFormat), arguments.build().toArray(Object[]::new));
+      delegateOnly.add(delegateField);
+      delegateOnly.add(methodName);
+      delegateParameters.forEach(delegateOnly::add);
+
+      if (TypeKind.VOID == returnType.getKind()) {
+        final Object[] args =
+            Stream.concat(arguments.build(), delegateOnly.build()).toArray(Object[]::new);
+
+        methodSpec.addStatement(
+            String.format("$N.schedule(new $T.$L(%s), () -> { $N.$L(%s); return null; })",
+                metadataFormat, delegateFormat), args);
+      } else if (TypeKind.DECLARED == returnType.getKind() &&
+          ((DeclaredType) returnType).asElement().equals(completableFutureType)) {
+        final Object[] args =
+            Stream.concat(arguments.build(), delegateOnly.build()).toArray(Object[]::new);
+
+        methodSpec.addStatement(
+            String.format("return $N.scheduleAsync(new $T.$L(%s), () -> $N.$L(%s))", metadataFormat,
+                delegateFormat), args);
+      } else {
+        final Object[] args = delegateOnly.build().toArray(Object[]::new);
+
+        methodSpec.addStatement(String.format("return $N.$L(%s)", delegateFormat), args);
+      }
 
       typeSpec.addMethod(methodSpec.build());
     }

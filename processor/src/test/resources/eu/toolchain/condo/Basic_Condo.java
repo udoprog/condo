@@ -14,6 +14,16 @@ class Basic_Condo implements Basic {
   }
 
   @Override
+  public void doSomething() {
+    condo.schedule(new BasicMetadata.DoSomething(), () -> { delegate.doSomething(); return null; });
+  }
+
+  @Override
+  public boolean checkSomething() {
+    return delegate.checkSomething();
+  }
+
+  @Override
   public CompletableFuture<Void> getInteger(final int argument) {
     return condo.scheduleAsync(new BasicMetadata.GetInteger(argument), () -> delegate.getInteger(argument));
   }
