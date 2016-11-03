@@ -44,62 +44,6 @@ To activate the annotation processor, add a dependency to `condo-processor`.
 </dependencies>
 ```
 
-The following example will showcase how this works with a `Database` interface.
+For examples on how to use it, see [condo-examples][examples]
 
-```java
-@AutoCondo
-interface Database {
-  public CompletableFuture<Void> write(final Entity entity);
-}
-```
-
-In your code, you can now provide the following delegate implementation.
-
-```java
-final Entity entity = Mockito.mock(Entity.class);
-final Database mockDatabase = Mockito.mock(Database.class);
-final Condo<DatabaseMetadata> condo = CoreCondo.buildDefault();
-
-doReturn(CompletableFuture.completedFuture(null)).when(mockDatabase).write(entity);
-
-final Database database = new Database_Condo(condo, mockDatabase);
-final Predicate<DatabaseMetadata> anyWrite = m -> m instanceof DatabaseMetadata.Write;
-
-condo.mask(anyWrite);
-
-final CompletableFuture<Void> writeFuture = database.write(entity);
-
-/* writes will never happen */
-verify(mockDatabase, never()).write(entity);
-
-condo.pump(anyWrite);
-
-/* will always pass */
-verify(mockDatabase).write(entity);
-```
-
-There are certain guarantees provided by this code.
-Now you can control which writes are performed in which order.
-This is a fundamental property of writing stable integration tests.
-
-The `Database` interface in isolation is not terribly interesting, but consider
-if it is part of a larger project.
-Now you can wait until certan preconditions are true, before doing a certain
-action.
-
-```java
-final Condo<DatabaseMetadata> condo = /*  */;
-final Service service  = /*  */;
-
-final Predicate<DatabaseMetadata> anyUpload = m -> m instanceof DatabaseMetadata.Upload;
-
-final String content = /*  */;
-
-service.request('PUT', '/upload', content);
-
-/* wait until an upload has been processed by the database before attempting to
-   perform a request */
-condo.waitOnce(anyUpload);
-
-service.request('GET', '/search').join()
-```
+[examples]: /examples/src/test/java/eu/toolchain/condo
