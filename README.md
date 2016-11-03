@@ -32,6 +32,20 @@ and `<name>Metadata` interface to be generated.
 These are implementations that are intended to wrap the annotated interfaces to
 provide a condo-based implementation.
 
+To activate the annotation processor, add a dependency to `condo-processor`.
+
+```xml
+<dependencies>
+  <dependency>
+    <groupId>eu.toolchain.condo</groupId>
+    <artifactId>condo-processor</artifactId>
+    <version>${condo.version}</version>
+  </dependency>
+</dependencies>
+```
+
+The following example will showcase how this works with a `Database` interface.
+
 ```java
 @AutoCondo
 interface Database {
@@ -62,4 +76,30 @@ condo.pump(anyWrite);
 
 /* will always pass */
 verify(mockDatabase).write(entity);
+```
+
+There are certain guarantees provided by this code.
+Now you can control which writes are performed in which order.
+This is a fundamental property of writing stable integration tests.
+
+The `Database` interface in isolation is not terribly interesting, but consider
+if it is part of a larger project.
+Now you can wait until certan preconditions are true, before doing a certain
+action.
+
+```java
+final Condo<DatabaseMetadata> condo = /*  */;
+final Service service  = /*  */;
+
+final Predicate<DatabaseMetadata> anyUpload = m -> m instanceof DatabaseMetadata.Upload;
+
+final String content = /*  */;
+
+service.request('PUT', '/upload', content);
+
+/* wait until an upload has been processed by the database before attempting to
+   perform a request */
+condo.waitOnce(anyUpload);
+
+service.request('GET', '/search').join()
 ```
