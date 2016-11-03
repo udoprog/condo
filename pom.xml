@@ -23,6 +23,7 @@
   <modules>
     <module>api</module>
     <module>core</module>
+    <module>processor</module>
   </modules>
 
   <licenses>
@@ -52,6 +53,18 @@
       <dependency>
         <groupId>eu.toolchain.condo</groupId>
         <artifactId>condo-api</artifactId>
+        <version>${project.version}</version>
+      </dependency>
+
+      <dependency>
+        <groupId>eu.toolchain.condo</groupId>
+        <artifactId>condo-core</artifactId>
+        <version>${project.version}</version>
+      </dependency>
+
+      <dependency>
+        <groupId>eu.toolchain.condo</groupId>
+        <artifactId>condo-processor</artifactId>
         <version>${project.version}</version>
       </dependency>
 

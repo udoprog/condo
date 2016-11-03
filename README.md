@@ -23,3 +23,43 @@ For even more detailed use-cases, read the JavaDoc in
 
 [condo-api]: /api/src/main/java/eu/toolchain/condo/Condo.java
 [condo-tests]: /core/src/test/java/eu/toolchain/condo/CoreCondoTest.java
+
+## @AutoCondo annotation
+
+Any interfaces annotated with `@AutoCondo` will cause a `<name>_Condo` class
+and `<name>Metadata` interface to be generated.
+
+These are implementations that are intended to wrap the annotated interfaces to
+provide a condo-based implementation.
+
+```java
+@AutoCondo
+interface Database {
+  public CompletableFuture<Void> write(final Entity entity);
+}
+```
+
+In your code, you can now provide the following delegate implementation.
+
+```java
+final Entity entity = Mockito.mock(Entity.class);
+final Database mockDatabase = Mockito.mock(Database.class);
+final Condo<DatabaseMetadata> condo = CoreCondo.buildDefault();
+
+doReturn(CompletableFuture.completedFuture(null)).when(mockDatabase).write(entity);
+
+final Database database = new Database_Condo(condo, mockDatabase);
+final Predicate<DatabaseMetadata> anyWrite = m -> m instanceof DatabaseMetadata.Write;
+
+condo.mask(anyWrite);
+
+final CompletableFuture<Void> writeFuture = database.write(entity);
+
+/* writes will never happen */
+verify(mockDatabase, never()).write(entity);
+
+condo.pump(anyWrite);
+
+/* will always pass */
+verify(mockDatabase).write(entity);
+```
