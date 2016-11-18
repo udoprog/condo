@@ -9,7 +9,7 @@ import java.util.function.Supplier;
 /**
  * Main interface to Condo, the conditional execution engine.
  *
- * @param <M> Type of metadata.
+ * @param <M> type of metadata
  */
 public interface Condo<M> {
   /**
@@ -70,6 +70,16 @@ public interface Condo<M> {
    * @throws java.lang.InterruptedException waiting is interrupted
    */
   Condo<M> pump(Predicate<M> predicate) throws InterruptedException;
+
+  /**
+   * Allow a single masked action matching any of the given predicates to be processed.
+   *
+   * <p>This wait method only allows one action to be matched once, per predicate.
+   *
+   * @param predicates predicates to match against
+   * @throws java.lang.InterruptedException waiting is interrupted
+   */
+  Condo<M> pump(Collection<? extends Predicate<M>> predicates) throws InterruptedException;
 
   /**
    * Wait until an action matching the given predicate has been processed.

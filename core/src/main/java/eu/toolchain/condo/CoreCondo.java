@@ -90,22 +90,41 @@ public class CoreCondo<M> implements Condo<M> {
 
   @Override
   public Condo<M> pump(final Predicate<M> predicate) throws InterruptedException {
+    return pump(Collections.singleton(predicate));
+  }
+
+  @Override
+  public Condo<M> pump(final Collection<? extends Predicate<M>> predicates)
+      throws InterruptedException {
+    final List<? extends Predicate<M>> currentPredicates = new LinkedList<>(predicates);
+
     synchronized (maskLock) {
-      while (true) {
-        final Iterator<DeferredAction<M>> it = this.deferred.iterator();
+      while (!currentPredicates.isEmpty()) {
+        final Iterator<DeferredAction<M>> iterator = this.deferred.iterator();
 
-        while (it.hasNext()) {
-          final DeferredAction<M> d = it.next();
+        while (iterator.hasNext() && !currentPredicates.isEmpty()) {
+          final Iterator<? extends Predicate<M>> it = currentPredicates.iterator();
 
-          if (predicate.test(d.metadata)) {
-            it.remove();
-            d.runnable.run();
-            return this;
+          while (it.hasNext()) {
+            final Predicate<M> predicate = it.next();
+            final DeferredAction<M> d = iterator.next();
+
+            if (predicate.test(d.metadata)) {
+              iterator.remove();
+              it.remove();
+              d.runnable.run();
+            }
           }
+        }
+
+        if (currentPredicates.isEmpty()) {
+          break;
         }
 
         maskLock.wait();
       }
+
+      return this;
     }
   }
 
@@ -160,7 +179,7 @@ public class CoreCondo<M> implements Condo<M> {
   /**
    * Evaluate the list of deferred action after the list of masks has been updated.
    * <p>
-   * Must be invoked under {@link #maskLock}.
+   * <p>Must be invoked under {@link #maskLock}
    */
   private void evaluateDeferredAfterMaskUpdate() {
     final Iterator<DeferredAction<M>> it = this.deferred.iterator();
@@ -181,11 +200,11 @@ public class CoreCondo<M> implements Condo<M> {
   /**
    * Defer the given action.
    *
-   * @param metadata Metadata associated with the action.
-   * @param action Action to defer.
-   * @param future Future that will be bound to the action.
-   * @param <T> Return type of the action.
-   * @return A defferred action container.
+   * @param metadata metadata associated with the action
+   * @param action action to defer
+   * @param future future that will be bound to the action
+   * @param <T> return type of the action
+   * @return a deferred action container
    */
   private <T> DeferredAction<M> deferAction(
       final M metadata, final Supplier<? extends CompletionStage<T>> action,
