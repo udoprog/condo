@@ -4,7 +4,7 @@
   <parent>
     <groupId>eu.toolchain.condo</groupId>
     <artifactId>condo-parent</artifactId>
-    <version>0.2.2-SNAPSHOT</version>
+    <version>0.3.0</version>
     <relativePath>..</relativePath>
   </parent>
 
@@ -21,7 +21,7 @@
     <dependency>
       <groupId>eu.toolchain.condo</groupId>
       <artifactId>condo-processor</artifactId>
-      <version>0.2.2-SNAPSHOT</version>
+      <version>0.3.0</version>
       <scope>provided</scope>
     </dependency>
 
