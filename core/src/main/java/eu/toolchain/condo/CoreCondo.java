@@ -1,7 +1,12 @@
 package eu.toolchain.condo;
 
+import lombok.RequiredArgsConstructor;
+
 import java.util.ArrayList;
+import java.util.Collection;
+import java.util.Collections;
 import java.util.Iterator;
+import java.util.LinkedList;
 import java.util.List;
 import java.util.Optional;
 import java.util.concurrent.CompletableFuture;
@@ -10,7 +15,6 @@ import java.util.concurrent.Executor;
 import java.util.concurrent.ForkJoinPool;
 import java.util.function.Predicate;
 import java.util.function.Supplier;
-import lombok.RequiredArgsConstructor;
 
 /**
  * Core implementation of Condo.
@@ -118,25 +122,44 @@ public class CoreCondo<M> implements Condo<M> {
 
   @Override
   public Condo<M> waitOnce(final Predicate<M> predicate) throws InterruptedException {
+    return waitOnce(Collections.singletonList(predicate));
+  }
+
+  public Condo<M> waitOnce(final Collection<? extends Predicate<M>> predicates)
+      throws InterruptedException {
+    final List<? extends Predicate<M>> currentPredicates = new LinkedList<>(predicates);
+
     synchronized (processedLock) {
-      while (true) {
+      while (!currentPredicates.isEmpty()) {
         final Iterator<M> iterator = onceProcessed.iterator();
 
-        while (iterator.hasNext()) {
-          if (predicate.test(iterator.next())) {
-            iterator.remove();
-            return this;
+        while (iterator.hasNext() && !currentPredicates.isEmpty()) {
+          final Iterator<? extends Predicate<M>> it = currentPredicates.iterator();
+
+          while (it.hasNext()) {
+            final Predicate<M> predicate = it.next();
+
+            if (predicate.test(iterator.next())) {
+              iterator.remove();
+              it.remove();
+            }
           }
+        }
+
+        if (currentPredicates.isEmpty()) {
+          break;
         }
 
         processedLock.wait();
       }
+
+      return this;
     }
   }
 
   /**
    * Evaluate the list of deferred action after the list of masks has been updated.
-   *
+   * <p>
    * Must be invoked under {@link #maskLock}.
    */
   private void evaluateDeferredAfterMaskUpdate() {
