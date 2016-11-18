@@ -14,7 +14,7 @@ public class Service {
   public void put(final String id, final Entity entity) {
     commonPool.execute(() -> {
       try {
-        Thread.sleep(500);
+        Thread.sleep(50);
       } catch (InterruptedException e) {
         throw Throwables.propagate(e);
       }

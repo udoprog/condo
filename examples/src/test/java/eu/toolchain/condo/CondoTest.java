@@ -8,6 +8,8 @@ import org.mockito.Mockito;
 import java.util.concurrent.ForkJoinPool;
 import java.util.function.Predicate;
 
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertNull;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
@@ -15,13 +17,13 @@ import static org.mockito.Mockito.verify;
 public class CondoTest {
   final Entity entity = new Entity("John");
 
-  private Database database;
+  private InMemoryDatabase database;
   private Condo<DatabaseMetadata> condo;
   private Service service;
 
   @Before
   public void setUp() {
-    database = Mockito.mock(Database.class);
+    database = new InMemoryDatabase();
     condo = CoreCondo.buildDefault();
     service = new Service(new Database_Condo(condo, database));
   }
@@ -29,26 +31,20 @@ public class CondoTest {
   @Test
   public void testWriteNever() {
     service.put("hello", entity);
-    /* operation takes 500ms, this will _probably_ never pass */
-    verify(database, never()).write("hello", entity);
+    /* operation takes 50ms, this will _probably_ never pass */
+    assertNull(database.read("hello"));
   }
 
   @Test
   public void testWriteWait() throws Exception {
     service.put("hello", entity);
     condo.waitOnce(m -> m instanceof DatabaseMetadata.Write);
-    verify(database, times(1)).write("hello", entity);
+    assertEquals(entity, database.read("hello"));
   }
 
   @Test
   public void testWaitForSpecificEntity() throws Exception {
     ForkJoinPool.commonPool().execute(() -> {
-      try {
-        Thread.sleep(100);
-      } catch (final InterruptedException e) {
-        throw Throwables.propagate(e);
-      }
-
       service.put("hello", entity);
     });
 
@@ -59,22 +55,16 @@ public class CondoTest {
     service.put("world", entity);
     condo.waitOnce(writeEntity("hello"));
 
-    verify(database, times(1)).write("hello", entity);
-    verify(database, never()).write("world", entity);
+    assertEquals(entity, database.read("hello"));
+    assertNull(database.read("world"));
 
-    condo.pump(writeWorld);
+    condo.pump(writeWorld).waitOnce(writeWorld);
 
-    verify(database, times(1)).write("hello", entity);
-    verify(database, times(1)).write("world", entity);
+    assertEquals(entity, database.read("hello"));
+    assertEquals(entity, database.read("world"));
   }
 
-  public static Predicate<DatabaseMetadata> writeEntity(final String id) {
-    return m -> {
-      if (!(m instanceof DatabaseMetadata.Write)) {
-        return false;
-      }
-
-      return ((DatabaseMetadata.Write) m).id().equals(id);
-    };
+  static Predicate<DatabaseMetadata> writeEntity(final String id) {
+    return m -> m instanceof DatabaseMetadata.Write && ((DatabaseMetadata.Write) m).id().equals(id);
   }
 }
